@@ -1,0 +1,31 @@
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getDatabase, ref, set, update, onValue, push, remove, get } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-database.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js";
+import { questions } from "./questions.js";
+const app=initializeApp(firebaseConfig); const db=getDatabase(app); const auth=getAuth(app);
+await signInAnonymously(auth);
+window.MM={db,ref,set,update,onValue,push,remove,get,auth,questions};
+</script>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Matter Master Teacher</title><link rel="stylesheet" href="styles.css"></head><body><div class="wrap">
+<div class="card"><div class="brand">Grade 8 Physical Science • Unit 1</div><div class="h1">🧪 Matter Master — Teacher Control</div><p class="muted">You control the pace. Students cannot advance until you move the class.</p>
+<div class="stats"><div class="stat"><b id="n">0</b><span>Students</span></div><div class="stat"><b id="qnum">0/18</b><span>Question</span></div><div class="stat"><b id="correct">0%</b><span>Class Correct</span></div><div class="stat"><b id="roomLabel">—</b><span>Room</span></div></div></div>
+<div class="card" id="setup"><h2>Create Classroom Game</h2><p>Give students this join link:</p><input id="joinLink" readonly><p>Room code: <span class="code" id="roomCode">----</span></p><div class="row"><button class="btn" id="create">Create Room</button></div><p class="muted">Keep this tab open during the game.</p></div>
+<div class="card" id="control" style="display:none"><span class="mission" id="mission">Mission</span><h2 id="qtitle">Ready</h2><div class="question" id="qtext">Press Start.</div><div class="bar"><div id="progress" style="width:0"></div></div><br><div class="row"><button class="btn" id="start">▶ Start Question</button><button class="btn" id="next">➡ Next Question</button><button class="btn warn" id="results">📊 Show Results</button><button class="btn alt" id="hide">🙈 Hide Results</button></div></div>
+<div class="card" id="roster" style="display:none"><h2>👥 Students</h2><div id="students"></div></div>
+<div class="card" id="dashboard" style="display:none"><h2>📊 Live Class Data</h2><div id="data"></div></div>
+</div>
+<script type="module">
+await new Promise(r=>setTimeout(r,300));
+const {db,ref,set,update,onValue,push,auth,questions}=window.MM;
+let room=null, state=null;
+const $=id=>document.getElementById(id);
+function code(){return Math.random().toString(36).slice(2,6).toUpperCase()}
+function render(s){state=s; if(!s)return; let q=questions[s.qIndex]||questions[0];$("mission").textContent=q.std+" • "+q.mission+" • Level "+q.level;$("qtitle").textContent="Question "+(s.qIndex+1)+" of "+questions.length;$("qtext").textContent=s.live?q.q:"Press Start Question to launch this question.";$("progress").style.width=((s.qIndex+1)/questions.length*100)+"%";$("qnum").textContent=(s.qIndex+1)+"/"+questions.length;$("roomLabel").textContent=room||"—";$("results").disabled=!s.live;$("n").textContent=Object.keys(s.students||{}).length;$("data").innerHTML=Object.values(s.students||{}).map(st=>`<div class="student">${st.name} ${st.submitted?"✅":"⏳"} ${st.xp||0} XP</div>`).join("")||"No students yet.";let vals=Object.values(s.students||{}).filter(x=>x.submitted);$("correct").textContent=vals.length?Math.round(vals.filter(x=>x.correct).length/vals.length*100)+"%":"—";$("students").innerHTML=Object.values(s.students||{}).map(st=>`<span class="student">${st.name}</span>`).join("")||"Waiting for students…"}
+$("create").onclick=async()=>{room=code();$("roomCode").textContent=room;let base=ref(db,"rooms/"+room);await set(base,{teacherUid:auth.currentUser.uid,qIndex:0,live:false,showResults:false,students:{}});$("setup").style.display="none";$("control").style.display="block";$("roster").style.display="block";$("dashboard").style.display="block";$("joinLink").value=location.href.replace("teacher.html","student.html")+"?room="+room;onValue(base,s=>render(s.val()))}
+$("start").onclick=async()=>{if(room)await update(ref(db,"rooms/"+room),{live:true,showResults:false})}
+$("next").onclick=async()=>{if(!room)return;let next=Math.min((state?.qIndex||0)+1,questions.length-1);let reset={qIndex:next,live:false,showResults:false};Object.keys(state?.students||{}).forEach(uid=>{reset["students/"+uid+"/submitted"]=false;reset["students/"+uid+"/correct"]=false;});await update(ref(db,"rooms/"+room),reset)}
+$("results").onclick=async()=>{if(room)await update(ref(db,"rooms/"+room),{showResults:true})}
+$("hide").onclick=async()=>{if(room)await update(ref(db,"rooms/"+room),{showResults:false})}
+</script></body></html>
