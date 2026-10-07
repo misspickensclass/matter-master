@@ -1,5 +1,5 @@
 export const firebaseConfig = {
-  apiKey: "AIzaSyCraYmrMT_ZV04bJ5lKnDuHEAN9qbi3UM",
+  apiKey: "AIzaSyCraYmrMT_ZVvO4bJ5lKnDuHEAN9qbi3UM",
   authDomain: "matter-master-43bec.firebaseapp.com",
   databaseURL: "https://matter-master-43bec-default-rtdb.firebaseio.com",
   projectId: "matter-master-43bec",
